@@ -22,6 +22,7 @@ export class ParcelService {
     if (stored) {
       try {
         parcels = JSON.parse(stored);
+        console.log('Loaded parcels from storage:', parcels.length);
       } catch (error) {
         console.error('Error loading parcels from storage:', error);
         this.initializeDummyData();
@@ -37,8 +38,12 @@ export class ParcelService {
     if (ordersStored) {
       try {
         const orders = JSON.parse(ordersStored);
+        console.log('Loaded orders from storage:', orders.length);
         const convertedParcels = this.convertOrdersToParcels(orders);
+        console.log('Converted orders to parcels:', convertedParcels.length);
         parcels = [...parcels, ...convertedParcels];
+        // Clear orders from localStorage to prevent duplication
+        localStorage.removeItem('orders');
       } catch (error) {
         console.error('Error loading orders from storage:', error);
       }
@@ -555,6 +560,15 @@ export class ParcelService {
       };
       
       observer.next(stats);
+      observer.complete();
+    });
+  }
+
+  deleteAllParcels(): Observable<boolean> {
+    return new Observable(observer => {
+      localStorage.removeItem(this.STORAGE_KEY);
+      this.parcelsSubject.next([]);
+      observer.next(true);
       observer.complete();
     });
   }

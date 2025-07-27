@@ -15,7 +15,14 @@
           <input formControlName="senderEmail" type="email" placeholder="Email" class="w-full mb-4 p-2 border rounded" />
           <input formControlName="senderPhone" type="tel" placeholder="Phone Number" pattern="[0-9]{10,12}" class="w-full mb-4 p-2 border rounded" />
           <input formControlName="senderHometown" type="text" placeholder="Hometown" class="w-full mb-4 p-2 border rounded" />
-          <input formControlName="senderZip" type="text" placeholder="Zipcode" class="w-full mb-4 p-2 border rounded" />
+          <select formControlName="senderHometown" class="w-full mb-4 p-2 border rounded" (change)="onCountyChange('sender', $any($event.target).value)">
+            <option value="" disabled selected>Select County</option>
+            <option *ngFor="let county of counties" [value]="county.name">{{ county.name }}</option>
+          </select>
+          <select formControlName="senderZip" class="w-full mb-4 p-2 border rounded" >
+            <option value="" disabled selected>Select Zipcode</option>
+            <option *ngFor="let zip of senderZipCodes" [value]="zip">{{ zip }}</option>
+          </select>
         </div>
 
         <!-- Receiver -->
@@ -25,8 +32,14 @@
           <input formControlName="receiverName" type="text" placeholder="Name" class="w-full mb-4 p-2 border rounded" />
           <input formControlName="receiverEmail" type="email" placeholder="Email" class="w-full mb-4 p-2 border rounded" />
           <input formControlName="receiverPhone" type="tel" placeholder="Phone Number" pattern="[0-9]{10,12}" class="w-full mb-4 p-2 border rounded" />
-          <input formControlName="receiverHometown" type="text" placeholder="Hometown" class="w-full mb-4 p-2 border rounded" />
-          <input formControlName="receiverZip" type="text" placeholder="Zipcode" class="w-full mb-4 p-2 border rounded" />
+          <select formControlName="receiverHometown" class="w-full mb-4 p-2 border rounded" (change)="onCountyChange('receiver', parcelForm.get('receiverHometown')?.value)">
+            <option value="" disabled selected>Select County</option>
+            <option *ngFor="let county of counties" [value]="county.name">{{ county.name }}</option>
+          </select>
+          <select formControlName="receiverZip" class="w-full mb-4 p-2 border rounded" >
+            <option value="" disabled selected>Select Zipcode</option>
+            <option *ngFor="let zip of receiverZipCodes" [value]="zip">{{ zip }}</option>
+          </select>
         </div>
       </div>
 

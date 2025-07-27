@@ -34,10 +34,10 @@ POST {{baseUrl}}/users
 Content-Type: application/json
 
 {
-  "email": "peternjoroge5@gmail.com",
+  "email": "peternjoroge4@gmail.com",
   "password":"user123",
   "name": "peter",
-  "role": "ADMIN"
+  "role": "USER"
 }
 
 ###

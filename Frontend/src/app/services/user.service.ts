@@ -4,14 +4,14 @@ import { Observable, firstValueFrom } from 'rxjs';
 import { AccountStatus, UserRole } from '../component/Shared/user.model';
 
 export interface CreateUserDto {
-  fullName: string;
+  name: string;
   email: string;
   password: string;
   role: UserRole;
 }
 
 export interface UpdateUserDto {
-  fullName?: string;
+  name?: string;
   email?: string;
   role?: UserRole;
 }
@@ -37,7 +37,7 @@ export class UserService {
   constructor(private http: HttpClient) {}
 
   private getHeaders(): { headers: HttpHeaders } {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('access_token');
     return {
       headers: new HttpHeaders({ Authorization: `Bearer ${token}` })
     };

@@ -13,10 +13,11 @@ import { MailerModule } from '../shared/mailer/mailer/mailermodule';
 import {UsersModule} from "./users/user.module";
 import {JwtModule} from "@nestjs/jwt";
 import{CustomJwtModule} from "./auth/custom-jwt/custom-jwt.module";
+import { OrderGateway } from './order/order.gateway';
 
 @Module({
   imports: [MailerModule, AuthModule,CustomJwtModule,ConfigModule.forRoot()],
   controllers: [AppController, UsersController, OrdersController],
-  providers: [AppService, UsersService, OrdersService,CustomMailerService],
+  providers: [AppService, UsersService, OrdersService,CustomMailerService, OrderGateway],
 })
 export class AppModule {}

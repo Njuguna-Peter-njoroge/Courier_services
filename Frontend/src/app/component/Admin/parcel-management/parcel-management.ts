@@ -4,6 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { ParcelService } from '../../../services/parcel.service';
 import { Parcel, ParcelStatus, Priority, ParcelFilter } from '../../../models/parcel.model';
+import { Navbar } from '../../Shared/navbar/navbar';
+import { Footer } from '../../Shared/footer/footer';
+import { ToastService } from '../../../services/toast.service';
 
 // Add GoodType enum for dropdown
 export enum GoodType {
@@ -13,16 +16,13 @@ export enum GoodType {
   CLOTHING = 'CLOTHING',
   OTHER = 'OTHER'
 }
-import {Navbar} from '../../Shared/navbar/navbar';
-import {Footer} from '../../Shared/footer/footer';
-import { ToastService } from '../../../services/toast.service';
 
 @Component({
   selector: 'app-parcel-management',
   standalone: true,
   imports: [CommonModule, FormsModule, Navbar, Footer],
   templateUrl: './parcel-management.html',
-  styleUrl: './parcel-management.css'
+  styleUrls: ['./parcel-management.css']  // ✅ fixed here
 })
 export class ParcelManagementComponent implements OnInit, OnDestroy {
   parcels: Parcel[] = [];
@@ -52,7 +52,6 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
   // Enums for template
   ParcelStatus = ParcelStatus;
   Priority = Priority;
-
   GoodType = GoodType;
 
   // Math object for template
@@ -69,11 +68,13 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
     priority: 'NORMAL'
   };
 
-  constructor(private parcelService: ParcelService, private toastService: ToastService) {}
+  constructor(
+    private parcelService: ParcelService,
+    private toastService: ToastService
+  ) {}
 
   ngOnInit(): void {
     this.loadParcels();
-    // Set up periodic refresh to catch new orders
     this.setupPeriodicRefresh();
   }
 
@@ -83,9 +84,7 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
 
   loadParcels(): void {
     this.loading = true;
-    // First refresh the data to include any new orders
     this.parcelService.refreshData();
-    
     this.subscription.add(
       this.parcelService.getAllParcels().subscribe({
         next: (parcels) => {
@@ -102,7 +101,6 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
   }
 
   setupPeriodicRefresh(): void {
-    // Refresh data every 5 seconds to catch new orders
     setInterval(() => {
       if (!this.loading) {
         this.parcelService.refreshData();
@@ -110,29 +108,11 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
     }, 5000);
   }
 
-  applyFilters(): void {
-    this.filter = {
-      searchTerm: this.searchTerm || undefined,
-      status: this.selectedStatus as ParcelStatus || undefined,
-      priority: this.selectedPriority as Priority || undefined
-    };
 
-    this.subscription.add(
-      this.parcelService.filterParcels(this.filter).subscribe({
-        next: (filtered) => {
-          this.filteredParcels = filtered;
-          this.updatePagination();
-        }
-      })
-    );
-  }
-
-  updatePagination(): void {
-    this.totalPages = Math.ceil(this.filteredParcels.length / this.itemsPerPage);
-    if (this.currentPage > this.totalPages) {
-      this.currentPage = 1;
-    }
-  }
+  // updatePagination(): void {
+  //   this.totalPages = Math.ceil(this.filteredParcels.length / this.itemsPerPage);
+  //   this.currentPage = this.totalPages === 0 ? 1 : Math.min(this.currentPage, this.totalPages);
+  // }
 
   get paginatedParcels(): Parcel[] {
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
@@ -167,21 +147,42 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
       priority: 'NORMAL'
     };
   }
+
   submitCreateParcel(): void {
     if (!this.newParcel.description || !this.newParcel.weight || !this.newParcel.dimensions || !this.newParcel.goodType || !this.newParcel.priority) {
       this.showErrorMessage('Please fill all required fields.');
       return;
     }
     this.loading = true;
-    // Here you would call your parcelService to create the parcel, e.g.:
-    // this.parcelService.createParcel(this.newParcel).subscribe(...)
-    // For now, just simulate and close modal
-    setTimeout(() => {
-      this.showCreateModal = false;
-      this.loading = false;
-      this.showSuccessMessage('Parcel created successfully');
-      this.loadParcels();
-    }, 1000);
+
+    this.subscription.add(
+      this.parcelService.createParcel({
+        description: this.newParcel.description,
+        weight: this.newParcel.weight,
+        dimensions: this.newParcel.dimensions,
+        priority: this.newParcel.priority,
+        status: this.ParcelStatus.PENDING,
+        sender: {} as any,
+        recipient: {} as any,
+        courier: undefined,
+        cost: 0,
+        trackingNumber: '',
+        deliveryDetails: {} as any,
+        estimatedDelivery: new Date()
+      }).subscribe({
+        next: (createdParcel) => {
+          this.showCreateModal = false;
+          this.loading = false;
+          this.showSuccessMessage('Parcel created successfully');
+          this.loadParcels();
+        },
+        error: (error) => {
+          console.error('Error creating parcel:', error);
+          this.loading = false;
+          this.showErrorMessage('Failed to create parcel');
+        }
+      })
+    );
   }
 
   closeModals(): void {
@@ -193,11 +194,11 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
     this.statusReason = '';
   }
 
-  // CRUD Operations
+  // CRUD
   updateStatus(): void {
     if (!this.selectedParcel) return;
-
     this.loading = true;
+
     this.subscription.add(
       this.parcelService.updateParcelStatus(
         this.selectedParcel.id,
@@ -225,19 +226,25 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
 
   deleteParcel(): void {
     if (!this.selectedParcel) return;
-
     this.loading = true;
+
+    console.log('Deleting parcel:', this.selectedParcel.id, 'Current page:', this.currentPage);
+
     this.subscription.add(
       this.parcelService.deleteParcel(this.selectedParcel.id).subscribe({
         next: (success) => {
           if (success) {
+            console.log('Parcel deleted successfully');
+            // Removed resetting filteredParcels, totalPages, and currentPage here
             this.loadParcels();
             this.closeModals();
             this.showSuccessMessage('Parcel deleted successfully');
           } else {
+            console.log('Failed to delete parcel');
             this.showErrorMessage('Failed to delete parcel');
           }
           this.loading = false;
+          console.log('Loading state:', this.loading);
         },
         error: (error) => {
           console.error('Error deleting parcel:', error);
@@ -247,8 +254,42 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
       })
     );
   }
+  
+  updatePagination(): void {
+    console.log('Updating pagination. Filtered parcels:', this.filteredParcels.length, 'Items per page:', this.itemsPerPage);
+    this.totalPages = Math.ceil(this.filteredParcels.length / this.itemsPerPage);
+    this.currentPage = this.totalPages === 0 ? 1 : Math.min(this.currentPage, this.totalPages);
+    console.log('Total pages:', this.totalPages, 'Current page:', this.currentPage);
+  }
 
-  // Utility methods
+  // goToPage(page: number): void {
+  //   console.log('Go to page:', page, 'Total pages:', this.totalPages);
+  //   if (page >= 1 && page <= this.totalPages) {
+  //     this.currentPage = page;
+  //   }
+  // }
+
+  applyFilters(): void {
+    this.currentPage = 1; // Reset to first page on filter change
+    this.filter = {
+      searchTerm: this.searchTerm || undefined,
+      status: this.selectedStatus as ParcelStatus || undefined,
+      priority: this.selectedPriority as Priority || undefined
+    };
+    console.log('Applying filters:', this.filter);
+
+    this.subscription.add(
+      this.parcelService.filterParcels(this.filter).subscribe({
+        next: (filtered) => {
+          this.filteredParcels = filtered;
+          console.log('Filtered parcels count:', filtered.length);
+          this.updatePagination();
+        }
+      })
+    );
+  }
+
+  // Utility Methods
   getStatusClass(status: ParcelStatus): string {
     const statusClasses = {
       [ParcelStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
@@ -284,22 +325,19 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Pagination methods
   goToPage(page: number): void {
+    console.log('Go to page:', page, 'Total pages:', this.totalPages);
     if (page >= 1 && page <= this.totalPages) {
       this.currentPage = page;
+      this.applyFilters(); // Refresh displayed parcels after page change
     }
   }
 
   get pageNumbers(): number[] {
-    const pages = [];
-    for (let i = 1; i <= this.totalPages; i++) {
-      pages.push(i);
-    }
-    return pages;
+    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
   }
 
-  // Notification methods
+  // Toast
   private showSuccessMessage(message: string): void {
     this.toastService.success(message);
   }
@@ -308,18 +346,16 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
     this.toastService.error(message);
   }
 
-  // Bulk operations
+  // Bulk Operations
   bulkUpdateStatus(status: ParcelStatus): void {
-    // Implementation for bulk status updates
     console.log('Bulk update to status:', status);
   }
 
   exportParcels(): void {
-    // Implementation for exporting parcel data
     console.log('Exporting parcels...');
   }
 
-  // Search and filter methods
+  // Filters
   onSearchChange(): void {
     this.applyFilters();
   }
@@ -337,5 +373,28 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
     this.selectedStatus = '';
     this.selectedPriority = '';
     this.applyFilters();
+  }
+
+  deleteAllParcels(): void {
+    this.loading = true;
+    this.parcelService.deleteAllParcels().subscribe({
+      next: (success) => {
+        if (success) {
+          this.parcels = [];
+          this.filteredParcels = [];
+          this.currentPage = 1;
+          this.totalPages = 1;
+          this.loading = false;
+          this.showSuccessMessage('All parcels deleted successfully');
+        } else {
+          this.loading = false;
+          this.showErrorMessage('Failed to delete all parcels');
+        }
+      },
+      error: (error) => {
+        this.loading = false;
+        this.showErrorMessage('Error deleting all parcels');
+      }
+    });
   }
 }
