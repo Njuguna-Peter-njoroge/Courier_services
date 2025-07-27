@@ -1,3 +1,4 @@
+import { UserRole } from '../../component/Shared/user.model';
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -23,7 +24,6 @@ import { ToastService } from '../../services/toast.service';
 export class UsersInfo {
   parcelForm: FormGroup;
 
-  // ✅ Inject OrderService here
   courierServices = [
     'Express Delivery',
     'Standard Delivery',
@@ -59,20 +59,17 @@ export class UsersInfo {
     });
   }
 
-
-
   onSubmit(): void {
     if (this.parcelForm.valid) {
       const formValue = this.parcelForm.value;
 
-      // Create user record
       const user: User = {
         name: formValue.senderName,
         email: formValue.senderEmail,
         phone: formValue.senderPhone,
         isVerified: true,
         location: formValue.senderHometown,
-        role: 'User',
+        role: UserRole.USER,
         createdAt: new Date(),
         updatedAt: new Date(),
         goodType: formValue.packageName,
@@ -83,9 +80,13 @@ export class UsersInfo {
         id: ''
       };
 
-      this.userService.addUser(user);
+      const dto = {
+        fullName: user.name,
+        email: user.email,
+        password: 'TempPass123!', // Ensure valid temporary password
+        role: user.role
+      };
 
-      // Create order record with complete information
       const order: Order = {
         orderId: '',
         customerName: formValue.senderName,
@@ -101,14 +102,28 @@ export class UsersInfo {
         notes: `Package: ${formValue.packageName}. Receiver: ${formValue.receiverName} (${formValue.receiverEmail}, ${formValue.receiverPhone}). ${formValue.notes || ''}`
       };
 
-      // Add order to service
-      this.orderService.addOrder(order);
+      this.userService.createUser(dto).subscribe({
+        next: (createdUser) => {
+          // Add user ID to the order
+          order.customerId = createdUser.id;
 
-      this.toastService.success('Order created successfully! Redirecting to orders page...');
+          this.orderService.createOrder(order).subscribe({
+            next: () => {
+              this.toastService.success('Order created successfully! Redirecting to orders page...');
+              setTimeout(() => this.router.navigate(['/Vieworders']), 2000);
+            },
+            error: (error) => {
+              this.toastService.error('Failed to create order. Please try again.');
+              console.error('Order creation error:', error);
+            }
+          });
+        },
+        error: (error) => {
+          this.toastService.error('Failed to create user. Please check the inputs.');
+          console.error('User creation error:', error);
+        }
+      });
 
-      setTimeout(() => {
-        this.router.navigate(['/Vieworders']);
-      }, 2000);
     } else {
       this.toastService.warning('Please fill in all required fields correctly.');
       this.markFormGroupTouched();

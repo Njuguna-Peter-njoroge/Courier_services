@@ -3,7 +3,8 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import {Navbar} from '../Shared/navbar/navbar';
 import {Footer} from '../Shared/footer/footer';
 import {RouterLink} from '@angular/router';
-import { AuthService, User } from '../../services/auth.service';
+import { AuthService } from '../../services/auth.service';
+import { User } from '../../component/Shared/user.model';
 import { Subscription } from 'rxjs';
 import { NgIf } from '@angular/common';
 

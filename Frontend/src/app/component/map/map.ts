@@ -32,10 +32,12 @@ export class CourierMapComponent implements OnInit {
   courierMarker: google.maps.LatLngLiteral | null = null;
 
   constructor(private orderService: OrderService) {}
-
   ngOnInit(): void {
-    this.orders = this.orderService.getOrders();
+    this.orderService.getOrders().subscribe((orders: Order[]) => {
+      this.orders = orders;
+    });
   }
+
 
   selectOrder(order: Order): void {
     this.selectedOrder = order;
@@ -70,8 +72,11 @@ export class CourierMapComponent implements OnInit {
   }
 
   refreshMap(): void {
-    this.orders = this.orderService.getOrders();
+    this.orderService.getOrders().subscribe((orders: Order[]) => {
+      this.orders = orders;
+    });
   }
+
 
   toggleRoutes(): void {
     alert('Toggle routes is not implemented yet');

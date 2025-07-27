@@ -1,78 +1,85 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import {Navbar} from '../../Shared/navbar/navbar';
-import {Footer} from '../../Shared/footer/footer';
-import {NgClass, NgForOf} from '@angular/common';
-import {RouterLink} from '@angular/router';
-import { AuthService, User } from '../../../services/auth.service';
+import { Navbar } from '../../Shared/navbar/navbar';
+import { Footer } from '../../Shared/footer/footer';
+import { NgClass, NgForOf } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { AuthService } from '../../../services/auth.service';
+import { DashboardService } from '../../../services/dasdboardservice';
+import { User } from '../../../component/Shared/user.model';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-admin-dashboard',
-  imports: [
-    Navbar,
-    Footer,
-    NgClass,
-    RouterLink,
-    NgForOf
-  ],
+  standalone: true,
+  imports: [Navbar, Footer, NgClass, RouterLink, NgForOf],
   templateUrl: './admin-dashboard.html',
-  styleUrl: './admin-dashboard.css'
+  styleUrls: ['./admin-dashboard.css'] // ✅ Fixed
 })
 export class AdminDashboard implements OnInit, OnDestroy {
   sidebarOpen = true;
   currentUser: User | null = null;
   private userSubscription: Subscription = new Subscription();
+  private sessionCheckInterval: any;
 
-  constructor(private authService: AuthService) {}
+  stats: { title: string; value: string | number }[] = [];
+
+  constructor(
+    private authService: AuthService,
+    private dashboardService: DashboardService
+  ) {}
 
   ngOnInit(): void {
-    // Subscribe to current user changes
     this.userSubscription = this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
     });
 
-    // Check session timeout periodically
-    setInterval(() => {
+    this.sessionCheckInterval = setInterval(() => {
       this.authService.checkSessionTimeout();
-    }, 60000); // Check every minute
+    }, 60000);
+
+    this.loadDashboardStats();
   }
 
   ngOnDestroy(): void {
     this.userSubscription.unsubscribe();
+    clearInterval(this.sessionCheckInterval);
   }
 
-  toggleSidebar() {
+  toggleSidebar(): void {
     this.sidebarOpen = !this.sidebarOpen;
-    // Extend session on user activity
     this.authService.extendSession();
   }
 
   logout(): void {
-    // Show confirmation dialog
     const confirmLogout = confirm('Are you sure you want to logout?');
-    
-    if (confirmLogout) {
-      this.authService.logout();
-    }
+    if (confirmLogout) this.authService.logout();
   }
 
   getUserName(): string {
-    return this.authService.getUserName();
+    return this.authService.getUserName() ?? '';
   }
 
   getUserRole(): string {
-    return this.authService.getUserRole();
+    return this.authService.getUserRole() ?? '';
   }
 
   isAuthenticated(): boolean {
     return this.authService.isAuthenticated();
   }
 
-  stats = [
-    { title: 'Users', value: 120 },
-    { title: 'Products', value: 58 },
-    { title: 'Orders', value: 34 },
-    { title: 'Revenue', value: '$12,500' },
-  ];
-
+  private loadDashboardStats(): void {
+    this.dashboardService.getStats().subscribe({
+      next: (data) => {
+        this.stats = [
+          { title: 'Users', value: data.totalUsers },
+          { title: 'Orders', value: data.totalOrders },
+          { title: 'Revenue', value: `$${data.totalRevenue}` },
+          { title: 'Couriers', value: data.totalCouriers },
+        ];
+      },
+      error: (err) => {
+        console.error('Failed to load stats:', err);
+      }
+    });
+  }
 }

@@ -1,11 +1,13 @@
 import { Component } from '@angular/core';
 import { Navbar } from '../Shared/navbar/navbar';
 import { Footer } from '../Shared/footer/footer';
-import { NgIf, NgFor } from '@angular/common';
-import { NgClass } from '@angular/common';
+import { NgIf, NgFor, NgClass } from '@angular/common';
 import { OrderService, Order } from '../../services/order.service';
-import { AuthService, User } from '../../services/auth.service';
-import { CourierMapComponent } from '../map/map'; // ✅ Correct import name
+import { AuthService } from '../../services/auth.service';
+import { User } from '../../component/Shared/user.model';
+import { CourierMapComponent } from '../map/map';
+import { Observable, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 @Component({
   selector: 'app-userdashboard',
@@ -16,39 +18,46 @@ import { CourierMapComponent } from '../map/map'; // ✅ Correct import name
     NgIf,
     NgFor,
     NgClass,
-    CourierMapComponent, // ✅ Use the correct component name
+    CourierMapComponent,
   ],
   templateUrl: './userdashboard.html',
   styleUrl: './userdashboard.css'
 })
 export class Userdashboard {
-  // Call this method to refresh the user's orders (e.g., after creating a new order)
-  refreshOrders() {
-    this.loadUserOrders();
-  }
   sidebarOpen = true;
   currentUser: User | null = null;
-  userOrders: Order[] = [];
+  userOrders$: Observable<Order[]> = of([]);
 
-  constructor(private orderService: OrderService, private authService: AuthService) {
+  constructor(
+    private orderService: OrderService,
+    private authService: AuthService
+  ) {
     this.currentUser = this.authService.getCurrentUser();
     this.loadUserOrders();
   }
 
-  loadUserOrders() {
+  loadUserOrders(): void {
     if (this.currentUser) {
-      const allOrders = this.orderService.getOrders();
-      const userName = this.currentUser.name.toLowerCase();
-      const userEmail = this.currentUser.email.toLowerCase();
-      this.userOrders = allOrders.filter(order => {
-        if (!order.customerName) return false;
-        const customer = order.customerName.toLowerCase();
-        return customer === userName || customer === userEmail;
-      });
+      const name = this.currentUser.name.toLowerCase();
+      const email = this.currentUser.email.toLowerCase();
+
+      this.userOrders$ = this.orderService.getOrders().pipe(
+        map((orders: Order[]) =>
+          orders.filter(order => {
+            if (!order.customerName) return false;
+            const customer = order.customerName.toLowerCase();
+            return customer === name || customer === email;
+          })
+        )
+      );
     }
   }
 
-  toggleSidebar() {
+  refreshOrders(): void {
+    this.loadUserOrders();
+  }
+
+  toggleSidebar(): void {
     this.sidebarOpen = !this.sidebarOpen;
   }
 }

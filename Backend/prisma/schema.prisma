@@ -44,23 +44,32 @@ enum GoodType {
   OTHER
 }
 
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  BANNED
+}
+
 model User {
-  id            String        @id @default(uuid())
-  name          String
-  email         String        @unique
-  password      String
-  status        AccountStatus @default(ACTIVE)
-  role          UserRole      @default(USER)
-  isVerified    Boolean       @default(false)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  phone         String?
-  location      String?
-  licenseNumber String?
-  vehicleType   VehicleType?
-  isAvailable   Boolean?
-  orders        Order[]       @relation("UserOrders")
-  parcels       Parcel[]      @relation("UserParcels")
+  id                    String        @id @default(uuid())
+  name                  String
+  email                 String        @unique
+  password              String
+  status                AccountStatus @default(ACTIVE)
+  role                  UserRole      @default(USER)
+  isVerified            Boolean       @default(false)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  phone                 String?
+  location              String?
+  licenseNumber         String?
+  vehicleType           VehicleType?
+  verificationToken     String?
+  isAvailable           Boolean?
+  orders                Order[]       @relation("UserOrders")
+  parcels               Parcel[]      @relation("UserParcels")
+  assignedCourierOrders Order[]       @relation("AssignedCourierOrders")
 }
 
 model Order {
@@ -70,15 +79,24 @@ model Order {
   customerId        String
   pickupAddress     String
   deliveryAddress   String
+  pickupLat         Float? // New: pickup latitude
+  pickupLng         Float? // New: pickup longitude
+  deliveryLat       Float? // New: delivery latitude
+  deliveryLng       Float? // New: delivery longitude
+  courierLat        Float? // New: real-time courier latitude
+  courierLng        Float? // New: real-time courier longitude
   courierService    String
   status            OrderStatus
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
-  packageWeight     String
+  packageWeight     Decimal
   packageDimensions String
   price             String
   notes             String?
+  assignedCourierId String?
   statusHistory     StatusHistory[] @relation("OrderStatusHistory")
+
+  User User[] @relation("AssignedCourierOrders")
 }
 
 model Parcel {
@@ -117,11 +135,6 @@ model StatusHistory {
   timestamp DateTime    @default(now())
   updatedBy String
   reason    String?
+  createdAt DateTime    @default(now())
   notes     String?
-}
-
-enum AccountStatus {
-  ACTIVE
-  PENDING
-  BANNED
 }

@@ -16,6 +16,8 @@ import {ParcelManagementComponent} from './component/Admin/parcel-management/par
 import {Addcourier} from './component/addcourier/addcourier';
 import {About} from './component/Shared/about/about';
 import {CourierMapComponent} from './component/map/map';
+import {Forgotpassword} from './component/auth/forgotpassword/forgotpassword';
+import {Resetpassword} from './component/auth/resetpassword/resetpassword';
 
 
 
@@ -34,9 +36,12 @@ export const routes: Routes = [
   { path: 'userdashboard', component: Userdashboard },
   {path:'UsersInfo',component:UsersInfo,},
   {path:'footer',component:Footer,},
+  {path:'forgot password',component:Forgotpassword,},
+  {path:'Resetpassword',component:Resetpassword,},
   {path:'adminDashboard',component:AdminDashboard,},
   {path: 'about', component:About},
   {path:'login',component:Login,},
+  {path:'Forgotpassword',component:Forgotpassword,},
   {path:'register',component:Register,},
   {path:'email_verification',component:EmailVerification,},
   {path:'users-info', component: UsersInfo},

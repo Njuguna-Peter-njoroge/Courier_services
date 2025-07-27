@@ -1,3 +1,4 @@
+import { UserRole } from '../../../component/Shared/user.model';
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -32,12 +33,12 @@ export class DriverCourierForm {
     if (this.driverForm.invalid) return;
     const driver = {
       ...this.driverForm.value,
-      role: 'courier',
+      role: UserRole.COURIER,
       createdAt: new Date(),
       updatedAt: new Date(),
       isVerified: false
     };
-    this.userService.addUser(driver);
+    this.userService.createUser(driver).subscribe();
     this.router.navigate(['/ManageUsers']);
   }
 }

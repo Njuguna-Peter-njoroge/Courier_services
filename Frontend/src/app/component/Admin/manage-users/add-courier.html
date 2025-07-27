@@ -10,7 +10,24 @@
       <label class="block text-sm">Password</label>
       <input formControlName="password" type="password" class="w-full p-2 mb-4 text-black rounded" placeholder="Enter password" />
       <label class="block text-sm">License Number/ID</label>
-      <input formControlName="licenseNumber" type="text" class="w-full p-2 mb-6 text-black rounded" placeholder="Enter license number or ID" />
+      <input formControlName="licenseNumber" type="text" class="w-full p-2 mb-4 text-black rounded" placeholder="Enter license number or ID" />
+
+      <label class="block text-sm">Vehicle Type</label>
+      <select formControlName="vehicleType" class="w-full p-2 mb-4 text-black rounded">
+        <option value="">Select vehicle type</option>
+        <option value="BIKE">Bike</option>
+        <option value="CAR">Car</option>
+        <option value="VAN">Van</option>
+        <option value="TRUCK">Truck</option>
+        <option value="OTHER">Other</option>
+      </select>
+
+      <label class="block text-sm">Available</label>
+      <select formControlName="isAvailable" class="w-full p-2 mb-6 text-black rounded">
+        <option [ngValue]="true">Yes</option>
+        <option [ngValue]="false">No</option>
+      </select>
+
       <button type="submit" class="w-full py-2 bg-[#B4791C] hover:bg-yellow-700 rounded text-black font-semibold">Add Courier</button>
     </form>
   </div>

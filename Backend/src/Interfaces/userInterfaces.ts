@@ -13,5 +13,6 @@ export interface User {
     goodType:string,
     licensenumber:string,
     vehicleType:string,
+    verificationToken?: string;
     role:UserRole,
 }

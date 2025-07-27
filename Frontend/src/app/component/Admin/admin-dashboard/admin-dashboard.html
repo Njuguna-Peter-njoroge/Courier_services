@@ -16,14 +16,14 @@
       <li><a routerLink="/UsersInfo" class="hover:text-blue-400">Create Users</a></li>
       <li><a routerLink="/" class="hover:text-blue-400">View Couriers</a></li>
       <li><a routerLink="/map" class="hover:text-blue-400">Track Parcel</a></li>
-      
+
       <!-- User Info Section -->
       <div class="p-4 border-t border-gray-700">
         <div class="text-sm text-gray-400 mb-2">Logged in as:</div>
         <div class="text-white font-medium">{{ getUserName() }}</div>
         <div class="text-xs text-gray-400 capitalize">{{ getUserRole() }}</div>
       </div>
-      
+
       <!-- Settings and Logout -->
       <div class="relative group p-4 border-t border-gray-700">
         <div class="cursor-pointer hover:text-blue-400">Settings ⚙</div>
@@ -31,12 +31,14 @@
           class="absolute left-4 bottom-14 w-40 bg-white text-gray-800 rounded-md shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-200 z-50"
         >
           <a routerLink="/profile" class="block px-4 py-2 hover:bg-gray-100">Profile</a>
-          <button 
-            (click)="logout()" 
+          <button
+            type="button"
+            (click)="logout()"
             class="block w-full text-left px-4 py-2 hover:bg-red-50 hover:text-red-600 transition-colors duration-200"
           >
             Logout
           </button>
+
         </div>
       </div>
 

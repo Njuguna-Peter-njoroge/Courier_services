@@ -13,6 +13,7 @@ import {AccountStatus, UserRole} from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import {UpdateUserDto} from "../Dtos/updateUser.dto";
 import {UserFiltersDto} from "../Dtos/useefilter.dto";
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -52,7 +53,7 @@ export class UsersService {
                     password: hashedPassword,
                     role: data.role as UserRole || UserRole.USER,
                     isVerified,
-                    // verificationToken,
+                    verificationToken,
                 },
             });
 
@@ -261,8 +262,9 @@ export class UsersService {
 
         await this.prisma.user.update({
             where: { id },
-            data: { status: AccountStatus.ACTIVE },
+            data: { status: AccountStatus.INACTIVE },
         });
+
 
         return {
             success: true,

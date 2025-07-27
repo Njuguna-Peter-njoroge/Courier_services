@@ -1,8 +1,9 @@
+import { UserRole } from '../../../component/Shared/user.model';
 import { Component, OnInit } from '@angular/core';
 import { Navbar } from '../../Shared/navbar/navbar';
 import { Footer } from '../../Shared/footer/footer';
 import { CommonModule } from '@angular/common';
-import {Order, OrderService} from '../../../services/order.service';
+import { Order, OrderService } from '../../../services/order.service';
 import { AuthService } from '../../../services/auth.service';
 import { UserService } from '../../../services/user.service';
 
@@ -23,50 +24,60 @@ export class ViewOrders implements OnInit {
   couriers: any[] = [];
   isAdmin = false;
 
-  constructor(private orderService: OrderService, private authService: AuthService, private userService: UserService) {}
-
+  constructor(
+    private orderService: OrderService,
+    private authService: AuthService,
+    private userService: UserService
+  ) {}
 
   ngOnInit(): void {
     this.loadOrders();
     const user = this.authService.getCurrentUser();
     this.isAdmin = user?.role === 'admin';
-    this.couriers = this.userService.getUsers().filter(u => u.role === 'courier');
+
+    this.userService.findAll().subscribe(users => {
+      this.couriers = users.filter((u: any) => u.role === UserRole.COURIER);
+    });
   }
+
   assignCourier(order: Order, courierId: string) {
     const courier = this.couriers.find(c => c.id === courierId);
     if (courier) {
       order.courierService = courier.name;
       order.updatedAt = new Date().toISOString();
-      // Save updated order
-      const allOrders = this.orderService.getOrders();
-      const idx = allOrders.findIndex(o => o.orderId === order.orderId);
-      if (idx !== -1) {
-        allOrders[idx] = order;
-        localStorage.setItem('orders', JSON.stringify(allOrders));
-        this.loadOrders();
-      }
+
+      this.orderService.getOrders().subscribe(allOrders => {
+        const idx = allOrders.findIndex((o: Order) => o.orderId === order.orderId);
+        if (idx !== -1) {
+          allOrders[idx] = order;
+          localStorage.setItem('orders', JSON.stringify(allOrders));
+          this.orders = allOrders;
+          this.setPagination();
+        }
+      });
     }
   }
 
   loadOrders() {
-    const allOrders = this.orderService.getOrders();
-    const user = this.authService.getCurrentUser();
-    if (user && user.role !== 'admin') {
-      // Filter orders for the logged-in user (by id or email)
-      this.orders = allOrders.filter(order =>
-        (order.customerName === user.name || order.customerName === user.email || order.orderId === user.id)
-      );
-    } else {
-      // Admin sees all orders
-      this.orders = allOrders;
-    }
+    this.orderService.getOrders().subscribe(allOrders => {
+      const user = this.authService.getCurrentUser();
+      if (user && user.role !== 'admin') {
+        this.orders = allOrders.filter((order: Order) =>
+          order.customerName === user.name ||
+          order.customerName === user.email ||
+          order.customerId === user.id
+        );
+      } else {
+        this.orders = allOrders;
+      }
+      this.setPagination();
+    });
+  }
+
+  setPagination() {
     this.totalPages = Math.ceil(this.orders.length / this.pageSize) || 1;
-    if (this.currentPage > this.totalPages) {
-      this.currentPage = this.totalPages;
-    }
-    if (this.currentPage < 1) {
-      this.currentPage = 1;
-    }
+    this.currentPage = Math.min(this.currentPage, this.totalPages);
+    this.currentPage = Math.max(this.currentPage, 1);
     this.setPaginatedOrders();
   }
 
@@ -77,9 +88,10 @@ export class ViewOrders implements OnInit {
   }
 
   goToPage(page: number) {
-    if (page < 1 || page > this.totalPages) return;
-    this.currentPage = page;
-    this.setPaginatedOrders();
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.setPaginatedOrders();
+    }
   }
 
   nextPage() {

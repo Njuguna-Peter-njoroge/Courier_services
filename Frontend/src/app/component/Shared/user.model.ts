@@ -5,7 +5,7 @@ export interface User {
   phone: string;
   isVerified: boolean;
   location: string;
-  role: string;
+  role: UserRole;
   createdAt: Date;
   updatedAt: Date;
   goodType: string;
@@ -13,4 +13,14 @@ export interface User {
   goodPrice: string;
   goodDescription: string;
   zipcode: string;
+}
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  USER = 'USER',
+  COURIER = 'COURIER'
+}
+
+export enum AccountStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE'
 }

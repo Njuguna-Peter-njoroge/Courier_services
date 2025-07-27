@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import {RouterLink} from '@angular/router';
-import { AuthService, User } from '../../../services/auth.service';
+import { AuthService } from '../../../services/auth.service';
+import { User } from '../../../component/Shared/user.model';
 import { Subscription } from 'rxjs';
 import { NgIf } from '@angular/common';
 
@@ -29,7 +30,7 @@ export class Navbar implements OnInit, OnDestroy {
   }
 
   isAdmin(): boolean {
-    return this.currentUser?.role === 'admin';
+    return this.currentUser?.role === 'ADMIN';
   }
   currentUser: User | null = null;
   private userSubscription: Subscription = new Subscription();
@@ -51,11 +52,11 @@ export class Navbar implements OnInit, OnDestroy {
   }
 
   getUserName(): string {
-    return this.authService.getUserName();
+    return this.authService.getUserName() ?? '';
   }
 
   isAuthenticated(): boolean {
-    return this.currentUser !== null && this.currentUser.isAuthenticated;
+    return this.authService.isAuthenticated();
   }
 
 }

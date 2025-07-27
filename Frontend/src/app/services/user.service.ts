@@ -1,132 +1,88 @@
 import { Injectable } from '@angular/core';
-import { User } from '../component/Shared/user.model';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
+import { Observable, firstValueFrom } from 'rxjs';
+import { AccountStatus, UserRole } from '../component/Shared/user.model';
+
+export interface CreateUserDto {
+  fullName: string;
+  email: string;
+  password: string;
+  role: UserRole;
+}
+
+export interface UpdateUserDto {
+  fullName?: string;
+  email?: string;
+  role?: UserRole;
+}
+
+export interface ChangePasswordDto {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface UserFiltersDto {
+  status?: AccountStatus;
+  role?: UserRole;
+  isVerified?: boolean;
+  search?: string;
+}
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class UserService {
-  private STORAGE_KEY = 'users_data';
-  private usersSubject = new BehaviorSubject<User[]>([]);
-  public users$ = this.usersSubject.asObservable();
+  private readonly apiUrl = 'http://localhost:3000/users';
 
-  constructor() {
-    this.loadUsers();
+  constructor(private http: HttpClient) {}
+
+  private getHeaders(): { headers: HttpHeaders } {
+    const token = localStorage.getItem('accessToken');
+    return {
+      headers: new HttpHeaders({ Authorization: `Bearer ${token}` })
+    };
   }
 
-  private loadUsers(): void {
-    const stored = localStorage.getItem(this.STORAGE_KEY);
-    if (stored) {
-      try {
-        const users = JSON.parse(stored);
-        this.usersSubject.next(users);
-      } catch (error) {
-        console.error('Error loading users from storage:', error);
-        this.initializeDummyUsers();
-      }
-    } else {
-      this.initializeDummyUsers();
+  findAll(filters?: UserFiltersDto): Observable<any[]> {
+    let params = new HttpParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params = params.set(key, value);
+        }
+      });
     }
+    return this.http.get<any[]>(`${this.apiUrl}`, { ...this.getHeaders(), params });
   }
 
-  private saveUsers(users: User[]): void {
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(users));
-    this.usersSubject.next(users);
+  findByName(fullName: string): Observable<any[]> {
+    const params = new HttpParams().set('search', fullName);
+    return this.http.get<any[]>(`${this.apiUrl}`, { ...this.getHeaders(), params });
   }
 
-  private initializeDummyUsers(): void {
-    const dummyUsers: User[] = [
-      {
-        id: '1',
-        name: 'John Doe',
-        email: 'john@example.com',
-        phone: '+1234567890',
-        isVerified: true,
-        location: 'New York, NY',
-        role: 'customer',
-        createdAt: new Date('2024-01-15'),
-        updatedAt: new Date('2024-01-15'),
-        goodType: 'Electronics',
-        goodWeight: '2.5 kg',
-        goodPrice: '$150',
-        goodDescription: 'Laptop accessories',
-        zipcode: '10001'
-      },
-      {
-        id: '2',
-        name: 'Jane Smith',
-        email: 'jane@example.com',
-        phone: '+1987654321',
-        isVerified: false,
-        location: 'Los Angeles, CA',
-        role: 'courier',
-        createdAt: new Date('2024-02-10'),
-        updatedAt: new Date('2024-02-10'),
-        goodType: 'Documents',
-        goodWeight: '0.5 kg',
-        goodPrice: '$25',
-        goodDescription: 'Legal documents',
-        zipcode: '90210'
-      },
-      {
-        id: '3',
-        name: 'Admin User',
-        email: 'admin@express.com',
-        phone: '+1555123456',
-        isVerified: true,
-        location: 'Chicago, IL',
-        role: 'admin',
-        createdAt: new Date('2024-01-01'),
-        updatedAt: new Date('2024-01-01'),
-        goodType: 'N/A',
-        goodWeight: 'N/A',
-        goodPrice: 'N/A',
-        goodDescription: 'System administrator',
-        zipcode: '60601'
-      }
-    ];
-    this.saveUsers(dummyUsers);
+  async getIdByName(fullName: string): Promise<string | null> {
+    const users = await firstValueFrom(this.findByName(fullName));
+    return users.length > 0 ? users[0].id : null;
   }
 
-  // CRUD Operations
-  getUsers(): User[] {
-    return this.usersSubject.value;
+  createUser(dto: CreateUserDto): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}`, dto, this.getHeaders());
   }
 
-  getUsersObservable(): Observable<User[]> {
-    return this.users$;
+  updateUser(id: string, dto: UpdateUserDto): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/${id}`, dto, this.getHeaders());
   }
 
-  addUser(user: User): void {
-    const users = this.usersSubject.value;
-    user.id = this.generateId();
-    user.createdAt = new Date();
-    user.updatedAt = new Date();
-    users.push(user);
-    this.saveUsers(users);
+  deleteUser(id: string): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/${id}`, this.getHeaders());
   }
 
-  updateUser(updatedUser: User): void {
-    const users = this.usersSubject.value;
-    const index = users.findIndex(u => u.id === updatedUser.id);
-    if (index !== -1) {
-      updatedUser.updatedAt = new Date();
-      users[index] = updatedUser;
-      this.saveUsers(users);
-    }
+  findById(id: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/${id}`, this.getHeaders());
   }
 
-  deleteUser(userId: string): void {
-    const users = this.usersSubject.value;
-    const filteredUsers = users.filter(u => u.id !== userId);
-    this.saveUsers(filteredUsers);
+  changePassword(id: string, dto: ChangePasswordDto): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/${id}/password`, dto, this.getHeaders());
   }
 
-  getUserById(id: string): User | undefined {
-    return this.usersSubject.value.find(u => u.id === id);
-  }
-
-  private generateId(): string {
-    return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-  }
 }

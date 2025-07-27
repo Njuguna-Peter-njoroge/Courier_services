@@ -1,195 +1,252 @@
 import { Injectable } from '@angular/core';
-import { Router } from '@angular/router';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { ToastService } from './toast.service'; // Import ToastService
+import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError, BehaviorSubject, ReplaySubject } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { User } from '../component/Shared/user.model';
 
-export interface User {
-  id: string;
+interface RegisterDto {
   name: string;
   email: string;
-  role: 'admin' | 'user' | 'courier';
-  isAuthenticated: boolean;
-  loginTime?: Date;
+  password: string;
+}
+
+interface LoginDto {
+  email: string;
+  password: string;
+}
+
+interface VerifyEmailDto {
+  email: string;
+  token: string;
+}
+
+interface ResendVerificationDto {
+  email: string;
+}
+
+interface ForgotPasswordDto {
+  email: string;
+}
+
+interface ResetPasswordDto {
+  email: string;
+  token: string;
+  newPassword: string;
+}
+
+export interface AuthResponse {
+  message: string;
+  user?: User;
+  token?: string;
+  access_token?: string;
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthService {
-  private currentUserSubject = new BehaviorSubject<User | null>(null);
+  private readonly apiUrl = 'http://localhost:3000/auth';
+  private loginStatusSubject = new BehaviorSubject<boolean>(false);
+  private currentUserSubject = new ReplaySubject<User | null>(1);
   public currentUser$ = this.currentUserSubject.asObservable();
-  
-  private readonly STORAGE_KEY = 'currentUser';
-  private readonly SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
 
-  constructor(private router: Router, private toastService: ToastService) { // Inject ToastService
-    this.loadUserFromStorage();
+  constructor(private http: HttpClient) {
+    // Initialize login status
+    this.loginStatusSubject.next(this.isLoggedIn());
+    this.emitCurrentUser();
   }
 
-  private loadUserFromStorage(): void {
-    const storedUser = localStorage.getItem(this.STORAGE_KEY);
-    if (storedUser) {
-      try {
-        const user: User = JSON.parse(storedUser);
-        
-        // Check if session is still valid
-        if (user.loginTime && this.isSessionValid(user.loginTime)) {
-          this.currentUserSubject.next(user);
-        } else {
-          // Session expired, clear storage
-          this.clearUserData();
-        }
-      } catch (error) {
-        console.error('Error parsing stored user data:', error);
-        this.clearUserData();
+  // Observable for login status changes
+  get loginStatus$(): Observable<boolean> {
+    return this.loginStatusSubject.asObservable();
+  }
+
+  private handleError(error: HttpErrorResponse) {
+    let errorMessage = 'An error occurred';
+
+    if (error.error instanceof ErrorEvent) {
+      // Client-side error
+      errorMessage = error.error.message;
+    } else {
+      // Server-side error
+      if (error.status === 409) {
+        errorMessage = 'User already exists with this email';
+      } else if (error.status === 400) {
+        errorMessage = error.error?.message || 'Invalid request data';
+      } else if (error.status === 401) {
+        errorMessage = 'Invalid credentials';
+      } else if (error.status === 404) {
+        errorMessage = 'Service not found';
+      } else if (error.status === 500) {
+        errorMessage = 'Internal server error';
+      } else if (error.status === 0) {
+        errorMessage = 'Unable to connect to server';
+      } else {
+        errorMessage = error.error?.message || `Error ${error.status}: ${error.statusText}`;
       }
     }
+
+    return throwError(() => ({
+      status: error.status,
+      message: errorMessage,
+      originalError: error
+    }));
   }
 
-  private isSessionValid(loginTime: Date): boolean {
-    const now = new Date().getTime();
-    const loginTimestamp = new Date(loginTime).getTime();
-    return (now - loginTimestamp) < this.SESSION_TIMEOUT;
+  register(dto: RegisterDto): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/register`, dto)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
   login(email: string, password: string): Observable<boolean> {
-    return new Observable(observer => {
-      // Mock authentication - replace with real API call
-      setTimeout(() => {
-        if (this.validateCredentials(email, password)) {
-          const user: User = {
-            id: this.generateUserId(),
-            name: this.getUserNameFromEmail(email),
-            email: email,
-            role: this.getUserRoleFromEmail(email),
-            isAuthenticated: true,
-            loginTime: new Date()
-          };
-
-          this.setCurrentUser(user);
-          observer.next(true);
-        } else {
-          observer.next(false);
-        }
-        observer.complete();
-      }, 1000); // Simulate API delay
+    return new Observable<boolean>((observer) => {
+      this.http.post<AuthResponse>(`${this.apiUrl}/login`, { email, password })
+        .pipe(catchError(this.handleError))
+        .subscribe({
+          next: (res) => {
+            const token = res.access_token || res.token;
+            if (token) {
+              localStorage.setItem('access_token', token);
+              if (res.user) {
+                localStorage.setItem('user_data', JSON.stringify(res.user));
+                localStorage.setItem('user_id', res.user.id || '');
+                this.currentUserSubject.next(res.user);
+              } else {
+                this.currentUserSubject.next(null);
+              }
+              this.updateLoginStatus();
+              observer.next(true);
+            } else {
+              observer.next(false);
+            }
+            observer.complete();
+          },
+          error: (err) => {
+            observer.error(err);
+          }
+        });
     });
   }
 
-  private validateCredentials(email: string, password: string): boolean {
-    // Mock validation - replace with real authentication
-    const validCredentials = [
-      { email: 'admin@express.com', password: 'admin123' },
-      { email: 'user@express.com', password: 'user123' },
-      { email: 'courier@express.com', password: 'courier123' }
-    ];
-
-    return validCredentials.some(cred => 
-      cred.email === email && cred.password === password
-    );
+  verifyEmail(dto: VerifyEmailDto): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/verify-email`, dto)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  private getUserNameFromEmail(email: string): string {
-    const name = email.split('@')[0];
-    return name.charAt(0).toUpperCase() + name.slice(1);
+  resendVerification(dto: ResendVerificationDto): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/resend-verification`, dto)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  private getUserRoleFromEmail(email: string): 'admin' | 'user' | 'courier' {
-    if (email.includes('admin')) return 'admin';
-    if (email.includes('courier')) return 'courier';
-    return 'user';
+  forgotPassword(dto: ForgotPasswordDto): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/forgot-password`, dto)
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  private generateUserId(): string {
-    return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  resetPassword(dto: ResetPasswordDto): Observable<AuthResponse> {
+    const token = localStorage.getItem('accessToken');
+    const headers = new HttpHeaders({
+      Authorization: `Bearer ${token}`
+    });
+
+    return this.http.post<AuthResponse>(`${this.apiUrl}/reset-password`, dto, { headers })
+      .pipe(
+        catchError(this.handleError)
+      );
   }
 
-  private setCurrentUser(user: User): void {
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(user));
-    this.currentUserSubject.next(user);
+
+  // Helper method to check if user is logged in
+  isLoggedIn(): boolean {
+    const token = localStorage.getItem('access_token');
+    return !!token;
   }
 
+  // Helper method to get current user token
+  getToken(): string | null {
+    return localStorage.getItem('access_token');
+  }
+
+  // Helper method to logout
   logout(): void {
-    // Clear user data
-    this.clearUserData();
-    
-    // Clear any other stored data if needed
-    this.clearApplicationData();
-    
-    // Navigate to homepage
-    this.router.navigate(['/homepage']);
-    
-    // Show logout confirmation using toast
-    this.toastService.success('Successfully logged out');
-  }
-
-  private clearUserData(): void {
-    localStorage.removeItem(this.STORAGE_KEY);
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('user_data');
+    this.loginStatusSubject.next(false);
     this.currentUserSubject.next(null);
   }
 
-  private clearApplicationData(): void {
-    // Clear any application-specific data on logout
-    // You can add more items to clear here
-    const keysToKeep = ['theme', 'language']; // Keep user preferences
-    
-    Object.keys(localStorage).forEach(key => {
-      if (!keysToKeep.includes(key)) {
-        // Optionally clear other data like orders, etc.
-        // localStorage.removeItem(key);
-      }
-    });
+  // Emit current user from localStorage
+  private emitCurrentUser(): void {
+    const userData = localStorage.getItem('user_data');
+    if (userData) {
+      this.currentUserSubject.next(JSON.parse(userData));
+    } else {
+      this.currentUserSubject.next(null);
+    }
   }
 
-  getCurrentUser(): User | null {
-    return this.currentUserSubject.value;
+  // Session timeout and extension stubs (implement as needed)
+  checkSessionTimeout(): void {
+    // Implement session timeout logic if needed
+  }
+
+  extendSession(): void {
+    // Implement session extension logic if needed
+  }
+
+  // User info helpers
+  getUserName(): string | null {
+    const user = this.getCurrentUser();
+    return user ? user.name : null;
+  }
+
+  getUserRole(): string | null {
+    const user = this.getCurrentUser();
+    return user ? user.role : null;
   }
 
   isAuthenticated(): boolean {
-    const user = this.getCurrentUser();
-    return user ? user.isAuthenticated : false;
+    return this.isLoggedIn();
   }
 
+  // Method to update login status (called after successful login)
+  updateLoginStatus(): void {
+    this.loginStatusSubject.next(this.isLoggedIn());
+  }
+
+  // Method to get current user data
+  getCurrentUser(): any {
+    const userData = localStorage.getItem('user_data');
+    return userData ? JSON.parse(userData) : null;
+  }
+
+  // Method to get current user role
+  getCurrentUserRole(): string | null {
+    const user = this.getCurrentUser();
+    return user ? user.role : null;
+  }
+
+  // Method to check if user is admin
   isAdmin(): boolean {
-    const user = this.getCurrentUser();
-    return user ? user.role === 'admin' : false;
+    return this.getCurrentUserRole() === 'ADMIN';
   }
 
-  isCourier(): boolean {
-    const user = this.getCurrentUser();
-    return user ? user.role === 'courier' : false;
+  // Method to check if user is instructor
+  isInstructor(): boolean {
+    return this.getCurrentUserRole() === 'INSTRUCTOR';
   }
 
-  getUserRole(): string {
-    const user = this.getCurrentUser();
-    return user ? user.role : 'guest';
-  }
-
-  getUserName(): string {
-    const user = this.getCurrentUser();
-    return user ? user.name : 'Guest';
-  }
-
-  getUserEmail(): string {
-    const user = this.getCurrentUser();
-    return user ? user.email : '';
-  }
-
-  // Auto-logout on session timeout
-  checkSessionTimeout(): void {
-    const user = this.getCurrentUser();
-    if (user && user.loginTime && !this.isSessionValid(user.loginTime)) {
-      this.logout();
-      this.toastService.warning('Your session has expired. Please log in again.'); // Replaced alert with toast notification
-    }
-  }
-
-  // Extend session on user activity
-  extendSession(): void {
-    const user = this.getCurrentUser();
-    if (user) {
-      user.loginTime = new Date();
-      this.setCurrentUser(user);
-    }
+  // Method to check if user is student
+  isStudent(): boolean {
+    return this.getCurrentUserRole() === 'STUDENT';
   }
 }
