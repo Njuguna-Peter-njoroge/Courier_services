@@ -16,6 +16,7 @@ import { UserFiltersDto } from '../Dtos/useefilter.dto';
 import { ChangePasswordDto } from '../Dtos/changepassword.dto';
 import { AccountStatus, UserRole } from '@prisma/client';
 import { Roles } from '../auth/decorators/roles.decorators';
+import { UserResponseDto } from 'src/Dtos/userResponse';
 
 @Controller('users')
 export class UsersController {
@@ -39,6 +40,18 @@ export class UsersController {
       return this.usersService.findWithFilters(filters);
     }
     return this.usersService.findAll();
+  }
+  @Get('by-email')
+  @Roles('ADMIN')
+  findByEmail(@Query('email') email: string) {
+    return this.usersService.findByEmail(email);
+  }
+
+  @Post('create-or-get')
+  async createOrGetUserByEmail(
+    @Body() dto: CreateUserDto,
+  ): Promise<UserResponseDto> {
+    return this.usersService.createOrGetUserByEmail(dto);
   }
 
   @Get('paginated')

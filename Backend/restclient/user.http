@@ -1,6 +1,6 @@
 
 @baseUrl = http://localhost:3000
-@access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3OGVlOTYxZS03YjUyLTRhZDUtOGVkNi04NDBiZDQ4NzgzMTkiLCJlbWFpbCI6Im5qdWd1bmFocGV0ZXJuam9yb2dlQGdtYWlsLmNvbSIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc1MzQyNzQzNiwiZXhwIjoxNzU0MDMyMjM2fQ.irWz2Ro6csaksDIXU1lK822maknu6FtGxxRiKd4ZPrM"
+@access_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2ODBjM2RkNC0zNWUwLTQyZWUtYjkwYi00ZWNjNWU3ZDlmMjgiLCJlbWFpbCI6Im5qdWd1bmFocGV0ZXJuam9yb2dlQGdtYWlsLmNvbSIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTc1Mzc3NjE2MSwiZXhwIjoxNzU0MzgwOTYxfQ.vLXl1KlrFqks0X5WWkDlG167q77WRbi8ThtMMDF24PQ"
 
 ### Set global headers
 ### (VS Code REST Client automatically applies this to all requests below)
@@ -13,7 +13,7 @@ Content-Type: application/json
 
 {
   "name": "New Name",
-  "email": "newemail@example.com"
+  "email": "njugunahpeternjoroge@gmail.com"
 }
 
 ### UPDATE USER PASSWORD (User or Admin)
@@ -26,7 +26,7 @@ Content-Type: application/json
 }
 
 ### DELETE USER (Admin only)
-DELETE {{baseUrl}}/users/12aa7cae-aae4-4889-8517-0b46a0074d0d
+DELETE {{baseUrl}}/users/3baf14a7-37f5-4da6-ba5e-8e0d0d2b487b
 
 
 ### CREATE USER (Admin only)
@@ -34,7 +34,7 @@ POST {{baseUrl}}/users
 Content-Type: application/json
 
 {
-  "email": "peternjoroge4@gmail.com",
+  "email": "devpeternjoroge@gmail.com",
   "password":"user123",
   "name": "peter",
   "role": "USER"
@@ -47,18 +47,20 @@ POST {{baseUrl}}/users
 Content-Type: application/json
 
 {
-  "email": "peterjuniordev5@gmail.com",
+  "email": "peterjuniordev@gmail.com",
   "password":"User123",
   "name": "peter",
-  "role": "COURIER"
+  "role": "USER"
 }
 
-###
 
 ### GET ALL USERS
 GET {{baseUrl}}/users
 
 ###
+### Get User by Email
+GET http://localhost:3000/users/by-email?email=peterjjuniordev@gmail.com
+# Authorization: Bearer <your_jwt_token>
 
 ### GET USERS WITH FILTERS
 GET {{baseUrl}}/users?role=USER&status=ACTIVE&isVerified=true&search=user
@@ -71,7 +73,7 @@ GET {{baseUrl}}/users/paginated?page=1&limit=5
 ###
 
 ### GET SINGLE USER BY ID (Admin only)
-GET {{baseUrl}}/users/b7e5a183-e46a-42e3-a734-72d415027c0d
+GET {{baseUrl}}/users/55a2f8bf-c805-40f5-80fb-0a35f4966d20
 
 ###
 

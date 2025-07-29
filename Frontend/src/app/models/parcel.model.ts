@@ -1,5 +1,6 @@
 export interface Parcel {
   id: string;
+  orderUuid?: string;  // Added optional orderUuid field
   trackingNumber: string;
   status: ParcelStatus;
   sender: UserInfo;

@@ -1,8 +1,6 @@
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { CommonModule } from '@angular/common';
 
 @Component({
-    imports: [CommonModule], 
   selector: 'app-loader',
   standalone: true,
   template: `

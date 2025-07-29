@@ -6,7 +6,7 @@ Content-Type: application/json
 
 {
   "email": "njugunahpeternjoroge@gmail.com",
-  "password":"user123",
+  "password":"admin123",
   "name": "peter"
 }
 
@@ -18,7 +18,7 @@ Content-Type: application/json
 
 {
   "email": "njugunahpeternjoroge@gmail.com",
-  "password": "admin1234"
+  "password": "admin123"
 }
 ###
 
@@ -39,7 +39,7 @@ Content-Type: application/json
 
 {
   "email": "devpeternjoroge@gmail.com",
-  "token": "378082"
+  "token": "423156"
 }
 
 ###
@@ -49,7 +49,7 @@ POST {{baseUrl}}/auth/forgot-password
 Content-Type: application/json
 
 {
- "email": "njugunahpeternjoroge@gmail.com"
+ "email": "dreamcoder763@gmail.com"
 }
 
 ###

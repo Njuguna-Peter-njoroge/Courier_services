@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { ParcelService } from '../../../services/parcel.service';
+import { OrderService } from '../../../services/order.service';
 import { Parcel, ParcelStatus, Priority, ParcelFilter } from '../../../models/parcel.model';
 import { Navbar } from '../../Shared/navbar/navbar';
 import { Footer } from '../../Shared/footer/footer';
@@ -22,7 +23,7 @@ export enum GoodType {
   standalone: true,
   imports: [CommonModule, FormsModule, Navbar, Footer],
   templateUrl: './parcel-management.html',
-  styleUrls: ['./parcel-management.css']  // ✅ fixed here
+  styleUrls: ['./parcel-management.css']   
 })
 export class ParcelManagementComponent implements OnInit, OnDestroy {
   parcels: Parcel[] = [];
@@ -68,8 +69,12 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
     priority: 'NORMAL'
   };
 
+  filterDateFrom: string = '';
+  filterDateTo: string = '';
+
   constructor(
     private parcelService: ParcelService,
+    private orderService: OrderService,
     private toastService: ToastService
   ) {}
 
@@ -84,16 +89,16 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
 
   loadParcels(): void {
     this.loading = true;
-    this.parcelService.refreshData();
     this.subscription.add(
-      this.parcelService.getAllParcels().subscribe({
-        next: (parcels) => {
-          this.parcels = parcels;
+      this.parcelService.getOrders().subscribe({
+        next: (orders) => {
+          console.log('Orders received:', orders);
+          this.parcels = this.parcelService.convertOrdersToParcels(orders);
           this.applyFilters();
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading parcels:', error);
+          console.error('Error loading orders:', error);
           this.loading = false;
         }
       })
@@ -168,7 +173,11 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
         cost: 0,
         trackingNumber: '',
         deliveryDetails: {} as any,
-        estimatedDelivery: new Date()
+        estimatedDelivery: new Date(),
+        id: '',
+        statusHistory: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
       }).subscribe({
         next: (createdParcel) => {
           this.showCreateModal = false;
@@ -200,13 +209,13 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
     this.loading = true;
 
     this.subscription.add(
-      this.parcelService.updateParcelStatus(
-        this.selectedParcel.id,
+      this.parcelService.updateOrderStatus(
+        this.selectedParcel.orderUuid || this.selectedParcel.id,
         this.newStatus,
         this.statusReason
       ).subscribe({
-        next: (success) => {
-          if (success) {
+        next: (response) => {
+          if (response && response.order) {
             this.loadParcels();
             this.closeModals();
             this.showSuccessMessage('Status updated successfully');
@@ -271,22 +280,25 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
 
   applyFilters(): void {
     this.currentPage = 1; // Reset to first page on filter change
-    this.filter = {
-      searchTerm: this.searchTerm || undefined,
-      status: this.selectedStatus as ParcelStatus || undefined,
-      priority: this.selectedPriority as Priority || undefined
-    };
-    console.log('Applying filters:', this.filter);
+    this.loading = true;
 
-    this.subscription.add(
-      this.parcelService.filterParcels(this.filter).subscribe({
-        next: (filtered) => {
-          this.filteredParcels = filtered;
-          console.log('Filtered parcels count:', filtered.length);
-          this.updatePagination();
-        }
-      })
-    );
+    this.orderService.filterOrders(
+      this.selectedStatus || undefined,
+      this.filterDateFrom || undefined,
+      this.filterDateTo || undefined
+    ).subscribe({
+      next: (orders) => {
+        this.parcels = this.parcelService.convertOrdersToParcels(orders);
+        this.filteredParcels = [...this.parcels];
+        this.loading = false;
+        this.updatePagination();
+      },
+      error: (error) => {
+        console.error('Error filtering orders:', error);
+        this.loading = false;
+        this.showErrorMessage('Failed to filter orders');
+      }
+    });
   }
 
   // Utility Methods

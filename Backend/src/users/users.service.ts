@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
@@ -76,6 +79,48 @@ export class UsersService {
       throw new InternalServerErrorException('An unexpected error occurred');
     }
   }
+  async createOrGetUserByEmail(data: CreateUserDto): Promise<UserResponseDto> {
+    try {
+      const email = data.email.toLowerCase();
+
+      // Step 1: Check if user with the email exists
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (existingUser) {
+        return this.sanitizeUser(existingUser);
+      }
+
+      // Step 2: If not, create the user
+      const hashedPassword = data.password
+        ? await bcrypt.hash(data.password, 10)
+        : '';
+
+      const newUser = await this.prisma.user.create({
+        data: {
+          name: data.name,
+          email,
+          password: hashedPassword,
+          phone: data.phone,
+          role: data.role || UserRole.USER,
+          location: data.location,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          zipcode: data.zipcode,
+          isVerified: true, // optional: set to false if OTP verification is needed
+        },
+      });
+
+      return this.sanitizeUser(newUser);
+    } catch (error) {
+      console.error('Error in createOrGetUserByEmail:', error);
+      throw new InternalServerErrorException(
+        'Failed to create or retrieve user',
+      );
+    }
+  }
+
   async findAll(): Promise<ApiResponse<UserResponseDto[]>> {
     const users = await this.prisma.user.findMany({
       where: { status: AccountStatus.ACTIVE },
@@ -317,5 +362,16 @@ export class UsersService {
       }
       throw new InternalServerErrorException('Failed to change password');
     }
+  }
+  async getUserByEmail(email: string): Promise<UserResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.sanitizeUser(user);
   }
 }

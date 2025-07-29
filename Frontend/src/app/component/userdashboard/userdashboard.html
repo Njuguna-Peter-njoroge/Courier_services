@@ -1,3 +1,4 @@
+
 <div class="flex h-screen overflow-hidden">
   <!-- Sidebar -->
   <div
@@ -9,11 +10,9 @@
     </div>
     <ul class="p-4 space-y-4">
       <li><a routerLink="/" class="hover:text-blue-400">Dashboard</a></li>
-      <li><a routerLink="/ManageUsers" class="hover:text-blue-400">View Orders</a></li>
-      <li><a routerLink="/UsersInfo" class="hover:text-blue-400">Notification</a></li>
+      <li><a routerLink="/ManageUsers" class="hover:text-blue-400">view orders</a></li>
+      <li><a routerLink="/UsersInfo" class="hover:text-blue-400">notification</a></li>
       <li><a routerLink="/map" class="hover:text-blue-400">Track Parcel</a></li>
-
-      <!-- Settings Dropdown -->
       <div class="relative group p-4 border-t border-gray-700">
         <div class="cursor-pointer hover:text-blue-400">Settings ⚙</div>
         <div
@@ -23,7 +22,9 @@
           <a routerLink="/Homepage" class="block px-4 py-2 hover:bg-gray-100">Logout</a>
         </div>
       </div>
+
     </ul>
+
   </div>
 
   <!-- Main Content -->
@@ -35,14 +36,8 @@
     >
       {{ sidebarOpen ? 'Hide Menu' : 'Show Menu' }}
     </button>
-
-    <!-- Embedded Courier Map Component -->
     <app-map></app-map>
 
     <!-- Header -->
-    <h2 class="text-2xl font-bold my-6 text-gray-800">Dashboard Overview</h2>
-
-    <!-- Footer -->
-    <app-footer></app-footer>
-  </div>
-</div>
+    <h2 class="text-2xl font-bold mb-4 text-gray-800">Dashboard Overview</h2>
+<app-footer></app-footer>

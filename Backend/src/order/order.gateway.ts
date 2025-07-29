@@ -1,4 +1,3 @@
-// parcel.gateway.ts
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -10,25 +9,41 @@ import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: '*', // Allow frontend to connect
   },
 })
-export class ParcelGateway {
+export class OrderGateway {
   @WebSocketServer()
   server: Server;
 
-  // Emit parcel location/status updates to subscribed clients
-  sendParcelUpdate(parcelId: string, data: any) {
-    this.server.to(parcelId).emit('parcelUpdate', data);
+  /**
+   * Called by service layer to send an update to all clients tracking this order.
+   */
+  sendOrderUpdate(orderId: string, data: any) {
+    this.server.to(orderId).emit('orderUpdate', data);
   }
 
-  // Client joins a room to track a specific parcel
-  @SubscribeMessage('trackParcel')
-  handleTrackParcel(
-    @MessageBody() parcelId: string,
+  /**
+   * Called when a client subscribes to track a specific order.
+   */
+  @SubscribeMessage('trackOrder')
+  handleTrackOrder(
+    @MessageBody() orderId: string,
     @ConnectedSocket() client: Socket,
   ) {
-    client.join(parcelId);
-    client.emit('joinedParcelRoom', parcelId);
+    client.join(orderId);
+    client.emit('joinedOrderRoom', { orderId });
+  }
+
+  /**
+   * Optional: Leave room
+   */
+  @SubscribeMessage('leaveOrder')
+  handleLeaveOrder(
+    @MessageBody() orderId: string,
+    @ConnectedSocket() client: Socket,
+  ) {
+    client.leave(orderId);
+    client.emit('leftOrderRoom', { orderId });
   }
 }

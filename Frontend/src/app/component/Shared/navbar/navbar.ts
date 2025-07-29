@@ -1,7 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import {RouterLink} from '@angular/router';
-import { AuthService } from '../../../services/auth.service';
-import { User } from '../../../component/Shared/user.model';
+import { AuthService, User } from '../../../services/auth.service';
 import { Subscription } from 'rxjs';
 import { NgIf } from '@angular/common';
 
@@ -15,23 +14,6 @@ import { NgIf } from '@angular/common';
   styleUrl: './navbar.css'
 })
 export class Navbar implements OnInit, OnDestroy {
-  scrollToAboutSection(): void {
-    const aboutSection = document.getElementById('about');
-    if (aboutSection) {
-      aboutSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }
-
-  scrollToWhatWeOffer(): void {
-    const section = document.getElementById('what-we-offer');
-    if (section) {
-      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }
-
-  isAdmin(): boolean {
-    return this.currentUser?.role === 'ADMIN';
-  }
   currentUser: User | null = null;
   private userSubscription: Subscription = new Subscription();
 
@@ -52,11 +34,11 @@ export class Navbar implements OnInit, OnDestroy {
   }
 
   getUserName(): string {
-    return this.authService.getUserName() ?? '';
+    return this.authService.getUserName();
   }
 
   isAuthenticated(): boolean {
-    return this.authService.isAuthenticated();
+    return this.currentUser !== null && this.currentUser.isAuthenticated;
   }
 
 }

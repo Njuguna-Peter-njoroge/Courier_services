@@ -32,27 +32,22 @@ export class OrderService {
     };
   }
 
-  // ✅ Get all orders
   getOrders(): Observable<Order[]> {
     return this.http.get<Order[]>(this.apiUrl, this.getHeaders());
   }
 
-  // ✅ Get orders by customer
   getOrdersByCustomer(customerId: string): Observable<Order[]> {
     return this.http.get<Order[]>(`${this.apiUrl}/customer/${customerId}`, this.getHeaders());
   }
 
-  // ✅ Get order by ID
   getOrderById(id: string): Observable<Order> {
     return this.http.get<Order>(`${this.apiUrl}/${id}`, this.getHeaders());
   }
 
-  // ✅ Create a new order
   createOrder(order: Partial<Order>): Observable<any> {
     return this.http.post(`${this.apiUrl}`, order, this.getHeaders());
   }
 
-  // ✅ Update an order
   updateOrder(id: string, order: Partial<Order>): Observable<any> {
     return this.http.patch(`${this.apiUrl}/${id}`, order, this.getHeaders());
   }
@@ -66,7 +61,6 @@ export class OrderService {
   }
 
 
-  // ✅ Delete an order
   deleteOrder(id: string): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${id}`, this.getHeaders());
   }
@@ -76,13 +70,12 @@ export class OrderService {
   }
 
 
-  // ✅ Filter orders by status or date range
   filterOrders(status?: string, fromDate?: string, toDate?: string): Observable<Order[]> {
-    let query = '';
-    if (status) query += `status=${status}&`;
-    if (fromDate) query += `fromDate=${fromDate}&`;
-    if (toDate) query += `toDate=${toDate}`;
+    const body: any = {};
+    if (status) body.status = status;
+    if (fromDate) body.fromDate = fromDate;
+    if (toDate) body.toDate = toDate;
 
-    return this.http.get<Order[]>(`${this.apiUrl}/filter?${query}`, this.getHeaders());
+    return this.http.post<Order[]>(`${this.apiUrl}/filter`, body, this.getHeaders());
   }
 }
