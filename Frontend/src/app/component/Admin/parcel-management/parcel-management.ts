@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subscription } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import { ParcelService } from '../../../services/parcel.service';
 import { OrderService } from '../../../services/order.service';
 import { Parcel, ParcelStatus, Priority, ParcelFilter } from '../../../models/parcel.model';
@@ -94,7 +94,8 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
         next: (orders) => {
           console.log('Orders received:', orders);
           this.parcels = this.parcelService.convertOrdersToParcels(orders);
-          this.applyFilters();
+          this.filteredParcels = [...this.parcels];
+          this.updatePagination();
           this.loading = false;
         },
         error: (error) => {
@@ -108,7 +109,18 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
   setupPeriodicRefresh(): void {
     setInterval(() => {
       if (!this.loading) {
-        this.parcelService.refreshData();
+        this.subscription.add(
+          this.parcelService.refreshData().subscribe({
+            next: (parcels) => {
+              this.parcels = parcels;
+              this.filteredParcels = [...parcels];
+              this.updatePagination();
+            },
+            error: (error) => {
+              console.error('Error refreshing parcels:', error);
+            }
+          })
+        );
       }
     }, 5000);
   }
@@ -244,8 +256,9 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
         next: (success) => {
           if (success) {
             console.log('Parcel deleted successfully');
-            // Removed resetting filteredParcels, totalPages, and currentPage here
-            this.loadParcels();
+            // Update filteredParcels and pagination after deletion
+            this.filteredParcels = this.filteredParcels.filter(p => p.id !== this.selectedParcel?.id);
+            this.updatePagination();
             this.closeModals();
             this.showSuccessMessage('Parcel deleted successfully');
           } else {
@@ -289,7 +302,22 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (orders) => {
         this.parcels = this.parcelService.convertOrdersToParcels(orders);
-        this.filteredParcels = [...this.parcels];
+        // Apply searchTerm filter
+        let filtered = [...this.parcels];
+        if (this.searchTerm) {
+          const term = this.searchTerm.toLowerCase();
+          filtered = filtered.filter(p =>
+            p.trackingNumber.toLowerCase().includes(term) ||
+            p.sender?.name.toLowerCase().includes(term) ||
+            p.recipient?.name.toLowerCase().includes(term) ||
+            p.description.toLowerCase().includes(term)
+          );
+        }
+        // Apply priority filter
+        if (this.selectedPriority) {
+          filtered = filtered.filter(p => p.priority === this.selectedPriority);
+        }
+        this.filteredParcels = filtered;
         this.loading = false;
         this.updatePagination();
       },
@@ -360,11 +388,75 @@ export class ParcelManagementComponent implements OnInit, OnDestroy {
 
   // Bulk Operations
   bulkUpdateStatus(status: ParcelStatus): void {
-    console.log('Bulk update to status:', status);
+    // Implement bulk update logic here
+    if (this.filteredParcels.length === 0) {
+      this.showErrorMessage('No parcels to update');
+      return;
+    }
+    this.loading = true;
+    const updateObservables = this.filteredParcels.map(parcel =>
+      this.parcelService.updateParcelStatus(parcel.id, status)
+    );
+    this.subscription.add(
+      forkJoin(updateObservables).subscribe({
+        next: () => {
+          this.showSuccessMessage('Bulk status update successful');
+          this.loadParcels();
+          this.loading = false;
+        },
+        error: (error) => {
+          console.error('Error in bulk status update:', error);
+          this.showErrorMessage('Bulk status update failed');
+          this.loading = false;
+        }
+      })
+    );
   }
 
   exportParcels(): void {
-    console.log('Exporting parcels...');
+    // Implement export logic here (e.g., CSV export)
+    if (this.filteredParcels.length === 0) {
+      this.showErrorMessage('No parcels to export');
+      return;
+    }
+    const csvContent = this.convertParcelsToCSV(this.filteredParcels);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'parcels_export.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    this.showSuccessMessage('Parcels exported successfully');
+  }
+
+  private convertParcelsToCSV(parcels: Parcel[]): string {
+    const headers = [
+      'Tracking Number',
+      'Description',
+      'Status',
+      'Priority',
+      'Sender Name',
+      'Recipient Name',
+      'Weight',
+      'Dimensions',
+      'Cost',
+      'Created At'
+    ];
+    const rows = parcels.map(p => [
+      p.trackingNumber,
+      p.description,
+      p.status,
+      p.priority,
+      p.sender?.name || '',
+      p.recipient?.name || '',
+      p.weight,
+      p.dimensions,
+      p.cost,
+      this.formatDate(p.createdAt)
+    ]);
+    const csvRows = [headers.join(','), ...rows.map(r => r.map(field => `"${field}"`).join(','))];
+    return csvRows.join('\n');
   }
 
   // Filters
